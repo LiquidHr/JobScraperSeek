@@ -29,7 +29,43 @@ function JobCard({ job }) {
     return { label: `Scraped ${daysSinceScraped} days ago`, class: 'badge-very-old' };
   };
 
+  const getCurrentPostedDate = (scrapedAt, postedDate) => {
+    // Calculate what Seek would show RIGHT NOW
+    if (!scrapedAt || !postedDate) return postedDate || 'Unknown';
+
+    const scrapedDate = new Date(scrapedAt);
+    const now = new Date();
+    const hoursSinceScraped = Math.floor((now - scrapedDate) / (1000 * 60 * 60));
+    const daysSinceScraped = Math.floor(hoursSinceScraped / 24);
+
+    // Parse the original posted date from Seek (e.g., "18h ago", "2d ago")
+    let originalHours = 0;
+    let originalDays = 0;
+
+    const hoursMatch = postedDate.match(/(\d+)h ago/);
+    const daysMatch = postedDate.match(/(\d+)d ago/);
+
+    if (hoursMatch) {
+      originalHours = parseInt(hoursMatch[1]);
+    } else if (daysMatch) {
+      originalDays = parseInt(daysMatch[1]);
+      originalHours = originalDays * 24;
+    }
+
+    // Calculate current total hours/days
+    const currentTotalHours = originalHours + hoursSinceScraped;
+    const currentTotalDays = Math.floor(currentTotalHours / 24);
+
+    // Format like Seek does
+    if (currentTotalHours < 24) {
+      return `${currentTotalHours}h ago`;
+    } else {
+      return `${currentTotalDays}d ago`;
+    }
+  };
+
   const scrapedBadge = getScrapedBadge(job.scraped_at);
+  const currentPostedDate = getCurrentPostedDate(job.scraped_at, job.posted_date);
 
   return (
     <div className="job-card">
@@ -41,7 +77,7 @@ function JobCard({ job }) {
         </h3>
         <div className="job-badges">
           <span className={`job-age-badge ${scrapedBadge.class}`}>{scrapedBadge.label}</span>
-          <span className="job-time">Posted: {job.posted_date}</span>
+          <span className="job-time">Posted: {currentPostedDate}</span>
         </div>
       </div>
 
