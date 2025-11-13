@@ -23,7 +23,7 @@ services:
         generateValue: true
 
   # Frontend Static Site
-  - type: web
+  - type: static
     name: liquidhr-frontend
     env: static
     region: oregon
@@ -33,10 +33,7 @@ services:
       npm install
       npm run build
     staticPublishPath: ./static
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    pullRequestPreviewsEnabled: false
     envVars:
       - key: NODE_VERSION
         value: 18
