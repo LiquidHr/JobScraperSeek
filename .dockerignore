@@ -16,8 +16,11 @@ ENV/
 *.swp
 *.swo
 .DS_Store
+# Ignore timestamped job files but KEEP jobs.json for initial deployment
 data/jobs_*.json
-data/seen_jobs*.json
+# IMPORTANT: Do NOT ignore data/jobs.json (needed for Render deployment)
+# Only ignore seen_jobs tracking files
+data/seen_jobs.json
 logs/*.log
 .env
 .env.local
