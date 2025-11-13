@@ -31,17 +31,27 @@ class JSONStorage(BaseStorage):
         self.seen_jobs_path.parent.mkdir(parents=True, exist_ok=True)
 
     def save(self, jobs: List[Job]) -> None:
-        """Save jobs to JSON file.
+        """Save jobs to JSON file (merges with existing jobs).
 
         Args:
-            jobs: List of Job objects to save
+            jobs: List of NEW Job objects to add
         """
-        jobs_data = [job.to_dict() for job in jobs]
+        # Load existing jobs
+        existing_jobs = self.load()
+
+        # Merge new jobs with existing jobs
+        all_jobs = existing_jobs + jobs
+
+        # Convert to dict for saving
+        jobs_data = [job.to_dict() for job in all_jobs]
+
+        # Ensure output directory exists
+        self.output_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(self.output_path, "w", encoding="utf-8") as f:
             json.dump(jobs_data, f, indent=2, ensure_ascii=False)
 
-        self.logger.info(f"Saved {len(jobs)} jobs to {self.output_path}")
+        self.logger.info(f"Saved {len(jobs)} new jobs (total: {len(all_jobs)} jobs in database)")
 
         # Update seen jobs
         self._update_seen_jobs(jobs)

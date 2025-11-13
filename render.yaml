@@ -32,10 +32,14 @@ services:
       cd frontend
       npm install
       npm run build
-    staticPublishPath: ./static
+    staticPublishPath: ./frontend/dist
     pullRequestPreviewsEnabled: false
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
     envVars:
       - key: NODE_VERSION
         value: 18
       - key: VITE_API_URL
-        value: https://seek-scraper-api.onrender.com
+        value: https://liquidhr-api.onrender.com

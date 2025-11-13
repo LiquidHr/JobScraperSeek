@@ -81,14 +81,16 @@ class Config:
         output_dir = project_root / self.get("storage.output_dir", "data")
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        date_str = datetime.now().strftime("%Y-%m-%d")
-
         if file_type == "json":
             filename = self.get("storage.json_file", "jobs_{date}.json")
         else:
             filename = self.get("storage.csv_file", "jobs_{date}.csv")
 
-        filename = filename.replace("{date}", date_str)
+        # Only replace {date} if it exists in the filename
+        if "{date}" in filename:
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            filename = filename.replace("{date}", date_str)
+
         return output_dir / filename
 
     def get_log_path(self) -> Path:

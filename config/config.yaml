@@ -122,8 +122,8 @@ storage:
 
   # File storage settings
   output_dir: "data"
-  json_file: "jobs_{date}.json"
-  csv_file: "jobs_{date}.csv"
+  json_file: "jobs.json"  # Fixed filename (accumulates all jobs)
+  csv_file: "jobs_{date}.csv"  # CSV still uses date for exports
 
   # Airtable settings (for future use)
   airtable:
