@@ -111,14 +111,24 @@ def create_app() -> FastAPI:
         try:
             # Check if config can be loaded
             config = Config()
-            storage_path = Path(config.get_output_path("json")).parent
+            output_path = config.get_output_path("json")
+            storage_path = output_path.parent
             storage_available = storage_path.exists() or storage_path.parent.exists()
+
+            # Check if jobs.json file exists
+            import os
+            jobs_file_exists = output_path.exists()
+            jobs_file_size = output_path.stat().st_size if jobs_file_exists else 0
+            cwd = os.getcwd()
 
             components = {
                 "config": "loaded",
                 "storage": "available" if storage_available else "unavailable",
                 "scraper": "ready",
-                "job_queue": "operational"
+                "job_queue": "operational",
+                "jobs_file": f"{'exists' if jobs_file_exists else 'MISSING'} ({jobs_file_size} bytes)",
+                "jobs_path": str(output_path),
+                "working_dir": cwd
             }
 
             return HealthResponse(
