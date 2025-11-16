@@ -1,0 +1,75 @@
+name: Scrape Jobs Daily
+
+on:
+  # Run every day at 2:00 AM UTC (off-peak hours)
+  schedule:
+    - cron: '0 2 * * *'  # Every day at 2:00 AM UTC
+
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  scrape-and-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full history for proper git operations
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'  # Cache pip dependencies
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run scraper
+        run: |
+          python main.py
+        env:
+          PYTHONUNBUFFERED: 1
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet data/jobs.json; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No new jobs found"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            NEW_JOBS=$(git diff data/jobs.json | grep -c "^\+.*job_id" || echo "0")
+            echo "new_jobs_count=$NEW_JOBS" >> $GITHUB_OUTPUT
+            echo "Found $NEW_JOBS new jobs"
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions Bot"
+          git add data/jobs.json
+          git commit -m "Auto-scrape: Added ${{ steps.check_changes.outputs.new_jobs_count }} new jobs on $(date +'%Y-%m-%d')
+
+          Scraped by GitHub Actions workflow
+
+          Automated scrape"
+          git push
+
+      - name: No changes found
+        if: steps.check_changes.outputs.has_changes == 'false'
+        run: |
+          echo "No new jobs were found. No commit needed."
+
+      - name: Upload scraper logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 30
