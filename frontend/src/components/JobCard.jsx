@@ -31,7 +31,9 @@ function JobCard({ job }) {
 
   const getCurrentPostedDate = (scrapedAt, postedDate) => {
     // Calculate what Seek would show RIGHT NOW
-    if (!scrapedAt || !postedDate) return postedDate || 'Unknown';
+    // Handle null, undefined, or missing posted date
+    if (!postedDate) return 'Date unavailable';
+    if (!scrapedAt) return postedDate;
 
     const scrapedDate = new Date(scrapedAt);
     const now = new Date();
@@ -50,6 +52,9 @@ function JobCard({ job }) {
     } else if (daysMatch) {
       originalDays = parseInt(daysMatch[1]);
       originalHours = originalDays * 24;
+    } else {
+      // If we can't parse the format, just return it as-is
+      return postedDate;
     }
 
     // Calculate current total hours/days

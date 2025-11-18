@@ -267,7 +267,8 @@ class SeekScraper:
                 card.query_selector('span[data-automation*="date"]') or
                 card.query_selector('time')
             )
-            posted_date = posted_elem.inner_text().strip() if posted_elem else None
+            # Set default value if posted date is not found
+            posted_date = posted_elem.inner_text().strip() if posted_elem else "Recently"
 
             # Extract description snippet - try multiple selectors
             description_elem = (
