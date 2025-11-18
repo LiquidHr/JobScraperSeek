@@ -17,6 +17,7 @@ class Job:
     job_url: str
     posted_date: Optional[str] = None
     salary: Optional[str] = None
+    job_type: Optional[str] = None  # Full-time, Part-time, Contract, Casual
     description: Optional[str] = None
     scraped_at: str = None
 

@@ -4,20 +4,25 @@ import JobCard from './JobCard';
 function JobsList({ jobs, onRefresh }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
-  const [filterCompany, setFilterCompany] = useState('');
+  const [filterJobType, setFilterJobType] = useState('');
 
-  // Extract unique locations and companies for filters
-  const uniqueLocations = [...new Set(jobs.map(job => job.location))].sort();
-  const uniqueCompanies = [...new Set(jobs.map(job => job.company))].sort();
+  // Extract unique locations and job types for filters
+  const uniqueLocations = [...new Set(jobs.map(job => job.location))].filter(Boolean).sort();
+  const uniqueJobTypes = [...new Set(jobs.map(job => job.job_type))].filter(Boolean).sort();
 
   // Filter jobs
   const filteredJobs = jobs.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.company.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLocation = !filterLocation || job.location === filterLocation;
-    const matchesCompany = !filterCompany || job.company === filterCompany;
+    // Search matches title, company, location, or description
+    const matchesSearch = !searchTerm ||
+                         job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         job.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (job.description && job.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    return matchesSearch && matchesLocation && matchesCompany;
+    const matchesLocation = !filterLocation || job.location === filterLocation;
+    const matchesJobType = !filterJobType || job.job_type === filterJobType;
+
+    return matchesSearch && matchesLocation && matchesJobType;
   });
 
   const handleExport = () => {
@@ -53,7 +58,7 @@ function JobsList({ jobs, onRefresh }) {
         <div className="search-filters">
           <input
             type="text"
-            placeholder="Search jobs or companies..."
+            placeholder="Search jobs, companies, locations..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -71,13 +76,13 @@ function JobsList({ jobs, onRefresh }) {
           </select>
 
           <select
-            value={filterCompany}
-            onChange={(e) => setFilterCompany(e.target.value)}
+            value={filterJobType}
+            onChange={(e) => setFilterJobType(e.target.value)}
             className="filter-select"
           >
-            <option value="">All Companies</option>
-            {uniqueCompanies.map(company => (
-              <option key={company} value={company}>{company}</option>
+            <option value="">All Job Types</option>
+            {uniqueJobTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
             ))}
           </select>
         </div>

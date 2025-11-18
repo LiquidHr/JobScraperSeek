@@ -270,6 +270,15 @@ class SeekScraper:
             # Set default value if posted date is not found
             posted_date = posted_elem.inner_text().strip() if posted_elem else "Recently"
 
+            # Extract job type (Full-time, Part-time, Contract, Casual) - try multiple selectors
+            job_type_elem = (
+                card.query_selector('[data-automation="jobType"]') or
+                card.query_selector('[data-automation="job-type"]') or
+                card.query_selector('span[data-automation*="type"]') or
+                card.query_selector('[data-automation="jobCardWorkType"]')
+            )
+            job_type = job_type_elem.inner_text().strip() if job_type_elem else None
+
             # Extract description snippet - try multiple selectors
             description_elem = (
                 card.query_selector('[data-automation="jobShortDescription"]') or
@@ -288,6 +297,7 @@ class SeekScraper:
                 job_url=job_url,
                 salary=salary,
                 posted_date=posted_date,
+                job_type=job_type,
                 description=description
             )
 
