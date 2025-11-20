@@ -46,15 +46,21 @@ jobs:
           if git diff --quiet data/jobs.json; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "new_jobs_count=0" >> $GITHUB_OUTPUT
-            echo "No new jobs found"
+            echo "jobs_removed=0" >> $GITHUB_OUTPUT
+            echo "No new jobs found and no old jobs removed"
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            NEW_JOBS=$(git diff data/jobs.json | grep -c "^\+.*job_id" || true)
-            if [ -z "$NEW_JOBS" ] || [ "$NEW_JOBS" = "0" ]; then
-              NEW_JOBS="unknown"
-            fi
-            echo "new_jobs_count=$NEW_JOBS" >> $GITHUB_OUTPUT
-            echo "Found $NEW_JOBS new jobs"
+            # Count jobs added and removed
+            ADDED=$(git diff data/jobs.json | grep -c "^\+.*\"job_id\"" || true)
+            REMOVED=$(git diff data/jobs.json | grep -c "^\-.*\"job_id\"" || true)
+
+            # Set defaults if empty
+            [ -z "$ADDED" ] || [ "$ADDED" = "0" ] && ADDED=0
+            [ -z "$REMOVED" ] || [ "$REMOVED" = "0" ] && REMOVED=0
+
+            echo "new_jobs_count=$ADDED" >> $GITHUB_OUTPUT
+            echo "jobs_removed=$REMOVED" >> $GITHUB_OUTPUT
+            echo "Found $ADDED new jobs, removed $REMOVED old jobs"
           fi
 
       - name: Commit and push changes
@@ -63,9 +69,24 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "GitHub Actions Bot"
           git add data/jobs.json
-          git commit -m "Auto-scrape: Added ${{ steps.check_changes.outputs.new_jobs_count }} new jobs on $(date +'%Y-%m-%d')
 
-          Scraped by GitHub Actions workflow
+          # Create commit message based on what changed
+          ADDED=${{ steps.check_changes.outputs.new_jobs_count }}
+          REMOVED=${{ steps.check_changes.outputs.jobs_removed }}
+
+          if [ "$ADDED" -gt 0 ] && [ "$REMOVED" -gt 0 ]; then
+            COMMIT_MSG="Auto-scrape: +$ADDED new jobs, -$REMOVED old jobs on $(date +'%Y-%m-%d')"
+          elif [ "$ADDED" -gt 0 ]; then
+            COMMIT_MSG="Auto-scrape: Added $ADDED new jobs on $(date +'%Y-%m-%d')"
+          elif [ "$REMOVED" -gt 0 ]; then
+            COMMIT_MSG="Auto-scrape: Removed $REMOVED old jobs on $(date +'%Y-%m-%d')"
+          else
+            COMMIT_MSG="Auto-scrape: Updated jobs database on $(date +'%Y-%m-%d')"
+          fi
+
+          git commit -m "$COMMIT_MSG
+
+          Scraped by GitHub Actions workflow (3-day retention)
 
           🤖 Automated scrape"
           git push

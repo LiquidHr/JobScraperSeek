@@ -58,6 +58,10 @@ function JobsList({ jobs, onRefresh }) {
     return matchesSearch && matchesLocation && matchesJobType;
   });
 
+  // Debug logging
+  console.log('Filter state:', { filterLocation, filterJobType, searchTerm });
+  console.log('Total jobs:', jobs.length, '| Filtered jobs:', filteredJobs.length);
+
   const handleExport = () => {
     // Export to CSV
     const headers = ['Title', 'Company', 'Location', 'Salary', 'Job Type', 'URL', 'Scraped At'];
@@ -140,9 +144,10 @@ function JobsList({ jobs, onRefresh }) {
         </div>
       ) : (
         <div className="jobs-grid">
-          {filteredJobs.map(job => (
-            <JobCard key={job.job_id} job={job} />
-          ))}
+          {filteredJobs.map((job, index) => {
+            if (index < 3) console.log(`Rendering job ${index}:`, job.title, job.location, job.job_type);
+            return <JobCard key={job.job_id} job={job} />;
+          })}
         </div>
       )}
     </div>
