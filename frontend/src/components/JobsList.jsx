@@ -2,7 +2,6 @@ import { useState } from 'react';
 import JobCard from './JobCard';
 
 function JobsList({ jobs, onRefresh }) {
-  const [searchTerm, setSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterJobType, setFilterJobType] = useState('');
 
@@ -36,31 +35,78 @@ function JobsList({ jobs, onRefresh }) {
   // Extract unique regions/states for location filter
   const locationRegions = [...new Set(jobs.map(job => getLocationRegion(job.location)))].filter(Boolean).sort();
 
-  // Extract unique job types for filter
-  const uniqueJobTypes = [...new Set(jobs.map(job => job.job_type))].filter(Boolean).sort();
+  // Extract unique job types for filter (normalize by trimming whitespace)
+  const uniqueJobTypes = [...new Set(jobs.map(job => job.job_type?.trim()).filter(Boolean))].sort();
 
   // Filter jobs
   const filteredJobs = jobs.filter(job => {
-    // Search matches title, company, location, or description
-    const matchesSearch = !searchTerm ||
-                         job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (job.location && job.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (job.description && job.description.toLowerCase().includes(searchTerm.toLowerCase()));
-
     // Location filter: match by region/state only
     const matchesLocation = !filterLocation ||
                            getLocationRegion(job.location) === filterLocation;
 
-    // Job type filter: exact match
-    const matchesJobType = !filterJobType || job.job_type === filterJobType;
+    // Job type filter: exact match (with whitespace normalization)
+    const matchesJobType = !filterJobType || job.job_type?.trim() === filterJobType;
 
-    return matchesSearch && matchesLocation && matchesJobType;
+    return matchesLocation && matchesJobType;
   });
 
   // Debug logging
-  console.log('Filter state:', { filterLocation, filterJobType, searchTerm });
+  console.log('=== FILTER DEBUG ===');
+  console.log('Filter state:', { filterLocation, filterJobType });
   console.log('Total jobs:', jobs.length, '| Filtered jobs:', filteredJobs.length);
+  console.log('Available locations:', locationRegions);
+  console.log('Available job types:', uniqueJobTypes);
+
+  // Log first 3 jobs to verify data
+  if (jobs.length > 0) {
+    console.log('Sample jobs data:');
+    jobs.slice(0, 3).forEach((job, i) => {
+      console.log(`  Job ${i + 1}:`, {
+        title: job.title,
+        location: job.location,
+        locationRegion: getLocationRegion(job.location),
+        job_type: job.job_type,
+        job_type_trimmed: job.job_type?.trim(),
+        job_type_length: job.job_type?.length,
+        job_type_charCodes: job.job_type ? Array.from(job.job_type).map(c => c.charCodeAt(0)) : []
+      });
+    });
+  }
+
+  // When filtering by job type, show which jobs match
+  if (filterJobType) {
+    console.log(`\n🔍 Filtering by job type: "${filterJobType}"`);
+    console.log('Filter job type length:', filterJobType.length);
+    console.log('Filter job type char codes:', Array.from(filterJobType).map(c => c.charCodeAt(0)));
+
+    const matchingJobs = jobs.filter(job => job.job_type?.trim() === filterJobType);
+    console.log(`Found ${matchingJobs.length} matching jobs for "${filterJobType}"`);
+
+    if (matchingJobs.length > 0) {
+      console.log('First 3 matching jobs:');
+      matchingJobs.slice(0, 3).forEach((job, i) => {
+        console.log(`  Match ${i + 1}:`, {
+          title: job.title,
+          job_type: job.job_type,
+          job_type_trimmed: job.job_type?.trim(),
+          matches: job.job_type?.trim() === filterJobType
+        });
+      });
+    }
+
+    // Show jobs that don't match and why
+    const nonMatchingJobs = jobs.filter(job => {
+      const trimmed = job.job_type?.trim();
+      return trimmed && trimmed !== filterJobType;
+    });
+    console.log(`\nJobs that don't match "${filterJobType}":`);
+    const uniqueNonMatching = [...new Set(nonMatchingJobs.map(j => j.job_type?.trim()))];
+    uniqueNonMatching.slice(0, 5).forEach(type => {
+      console.log(`  - "${type}" (length: ${type?.length})`);
+    });
+  }
+
+  console.log('==================');
 
   const handleExport = () => {
     // Export to CSV
@@ -93,14 +139,6 @@ function JobsList({ jobs, onRefresh }) {
     <div className="jobs-list">
       <div className="jobs-controls">
         <div className="search-filters">
-          <input
-            type="text"
-            placeholder="Search jobs, companies, locations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-
           <select
             value={filterLocation}
             onChange={(e) => setFilterLocation(e.target.value)}
@@ -135,7 +173,29 @@ function JobsList({ jobs, onRefresh }) {
       </div>
 
       <div className="results-info">
-        Showing {filteredJobs.length} of {jobs.length} jobs
+        <div>
+          Showing {filteredJobs.length} of {jobs.length} jobs
+          {(filterLocation || filterJobType) && (
+            <span style={{ marginLeft: '10px', color: '#666' }}>
+              (Filters active:
+              {filterLocation && ` Location: ${filterLocation}`}
+              {filterJobType && ` | Type: ${filterJobType}`}
+              )
+            </span>
+          )}
+        </div>
+        {(filterLocation || filterJobType) && (
+          <button
+            onClick={() => {
+              setFilterLocation('');
+              setFilterJobType('');
+            }}
+            className="btn btn-small"
+            style={{ marginLeft: '10px' }}
+          >
+            Clear Filters
+          </button>
+        )}
       </div>
 
       {filteredJobs.length === 0 ? (
@@ -143,10 +203,21 @@ function JobsList({ jobs, onRefresh }) {
           <p>No jobs found. Try adjusting your filters or start a new scrape.</p>
         </div>
       ) : (
-        <div className="jobs-grid">
+        <div className="jobs-grid" key={`grid-${filterJobType}-${filterLocation}`}>
           {filteredJobs.map((job, index) => {
-            if (index < 3) console.log(`Rendering job ${index}:`, job.title, job.location, job.job_type);
-            return <JobCard key={job.job_id} job={job} />;
+            if (index < 5) {
+              console.log(`📋 Rendering job ${index}:`, {
+                job_id: job.job_id,
+                title: job.title,
+                company: job.company,
+                location: job.location,
+                job_type: job.job_type,
+                job_type_trimmed: job.job_type?.trim(),
+                passed_filter: !filterJobType || job.job_type?.trim() === filterJobType
+              });
+            }
+            // Use combination of job_id and index to ensure unique keys
+            return <JobCard key={`${job.job_id}-${index}`} job={job} />;
           })}
         </div>
       )}
